@@ -7,8 +7,8 @@
 #include <HTTPClient.h>
 
 void WiFiConnected(WiFiEvent_t event, WiFiEventInfo_t info);
-
 String httpGETRequest(const char* serverAddress);
+JsonDocument deserialize(String json);
 
 const String ssid = "test1234";
 const String pass = "gaming1234";
@@ -18,6 +18,7 @@ NTPClient timeClient(ntpUDP);
 RTC_DS3231 rtc;
 
 const String serverAddress = "https://splatoon3.ink/data/schedules.json";
+JsonDocument latestData;
 
 // const char* root_ca = \ 
 // "-----BEGIN CERTIFICATE-----\n" \
@@ -64,7 +65,13 @@ void WiFiConnected(WiFiEvent_t event, WiFiEventInfo_t info) {
   connected = true;
 }
 
-String httpGETRequest(const String serverAddress) {
+JsonDocument deserialize(String json) {
+  JsonDocument doc;
+  deserializeJson(doc, json);
+  return doc;
+}
+
+String httpsGETRequest(const String serverAddress) {
   WiFiClientSecure client;
   HTTPClient https;
   client.setInsecure();
@@ -119,13 +126,20 @@ void loop() {
 
   //Code requiring an internet connection
   if (connected) {
-    // Make a GET request every hour
-    if ((millis() - lastTime) > 10000) {
-      String response = httpGETRequest(serverAddress);
-      Serial.print(response);
+    // Make a GET request every 30m
+    if ((millis() - lastTime) > 1,8e+6) {
+      String response = httpsGETRequest(serverAddress);
+      latestData = deserialize(response);
       lastTime = millis();
     }
   }
+
+  if (!latestData.isNull()) {
+    JsonArray data = latestData["data"]["bankaraSchedules"]["nodes"];
+    String currentMode = data[0]["bankaraMatchSettings"][1]["vsRule"]["name"];
+    Serial.println(currentMode);
+  }
+  
   
   // DateTime now = rtc.now();
   // Serial.println(now.year());
