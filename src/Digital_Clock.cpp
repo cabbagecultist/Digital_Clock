@@ -14,6 +14,8 @@ JsonDocument deserialize(String json);
 const String ssid = "test1234";
 const String pass = "gaming1234";
 
+int buttonPin = 21;
+
 WiFiUDP ntpUDP;
 NTPClient timeClient(ntpUDP);
 RTC_DS3231 rtc;
@@ -21,6 +23,13 @@ LiquidCrystal_I2C screen(0x27, 16, 2);
 
 const String serverAddress = "https://splatoon3.ink/data/schedules.json";
 JsonDocument latestData;
+
+enum Mode {
+  TIME,
+  STAGES
+};
+
+Mode currentMode = TIME;
 
 const char* root_ca = \
 "-----BEGIN CERTIFICATE-----\n" \
@@ -90,6 +99,8 @@ String httpsGETRequest(const String serverAddress) {
 }
 
 void setup() {
+  pinMode(buttonPin, INPUT_PULLUP);
+
   Wire.setPins(8, 9);
   Serial.begin(115200);
   while(!Serial);
@@ -100,6 +111,7 @@ void setup() {
 
   screen.init();
   screen.backlight();
+  screen.clear();
 
   //Maybe add an led for errors in the future
   while(!rtc.begin()) {
@@ -110,6 +122,8 @@ void setup() {
 }
 
 void loop() {
+  DateTime now = rtc.now();
+
   //WiFi timeout triggered (30s)
   if(!connected && millis() >= 60000 && !WiFiTimeout) {
     Serial.println("WiFi timeout triggered!");
@@ -128,7 +142,6 @@ void loop() {
     }
   }
 
-  //Code requiring an internet connection
   if (connected) {
     // Make a GET request once, then repeat every 30m
     static bool firstRequest = false;
@@ -151,9 +164,49 @@ void loop() {
     Serial.println(currentMode);
   }
   
-  screen.clear();
-  screen.setCursor(0, 0);
-  screen.print("test");
+  //Switch menu on button press
+  if (digitalRead(buttonPin) == LOW) {
+    switch (currentMode) {
+    case TIME:
+      currentMode = STAGES;
+      break;
+    
+    case STAGES:
+      currentMode = TIME;
+      break;
+    }
+  }
+
+  switch (currentMode) {
+  case TIME: {
+    //Print time
+    // screen.clear();
+    screen.setCursor(0, 0);
+
+    //There HAS to be a better way to do this
+    String time = "";
+    time.concat(now.hour());
+    time.concat(":");
+    time.concat(now.minute());
+    time.concat(":");
+    time.concat(now.second());
+
+    screen.print(time);
+    break;
+  }
+  case STAGES:
+    //Print current stages
+    // screen.clear();
+    screen.setCursor(0, 0);
+    screen.print("stages");
+    break;
+  }
+  
+  Serial.println(digitalRead(buttonPin));
+  // screen.clear();
+  // screen.setCursor(0, 0);
+  // screen.print("test");
+
   // DateTime now = rtc.now();
   // Serial.println(now.year());
   // Serial.println(now.month());
@@ -164,5 +217,5 @@ void loop() {
   // Serial.print(':');
   // Serial.print(now.second());
   // Serial.println();
-  delay(1000);
+  // delay(1000);
 }
