@@ -5,6 +5,7 @@
 #include "RTClib.h"
 #include <ArduinoJson.h>
 #include <HTTPClient.h>
+#include <LiquidCrystal_I2C.h>
 
 void WiFiConnected(WiFiEvent_t event, WiFiEventInfo_t info);
 String httpGETRequest(const char* serverAddress);
@@ -16,6 +17,7 @@ const String pass = "gaming1234";
 WiFiUDP ntpUDP;
 NTPClient timeClient(ntpUDP);
 RTC_DS3231 rtc;
+LiquidCrystal_I2C screen(0x27, 16, 2);
 
 const String serverAddress = "https://splatoon3.ink/data/schedules.json";
 JsonDocument latestData;
@@ -96,6 +98,9 @@ void setup() {
   WiFi.mode(WIFI_STA);
   WiFi.begin(ssid, pass);
 
+  screen.init();
+  screen.backlight();
+
   //Maybe add an led for errors in the future
   while(!rtc.begin()) {
     Serial.println("RTC Module not found!");
@@ -146,7 +151,9 @@ void loop() {
     Serial.println(currentMode);
   }
   
-  
+  screen.clear();
+  screen.setCursor(0, 0);
+  screen.print("test");
   // DateTime now = rtc.now();
   // Serial.println(now.year());
   // Serial.println(now.month());
