@@ -14,7 +14,8 @@ JsonDocument deserialize(String json);
 const String ssid = "test1234";
 const String pass = "gaming1234";
 
-int buttonPin = 21;
+int buttonPin = 10;
+int previousButtonState = HIGH;
 
 WiFiUDP ntpUDP;
 NTPClient timeClient(ntpUDP);
@@ -30,6 +31,8 @@ enum Mode {
 };
 
 Mode currentMode = TIME;
+
+String gameMode = "No Connection";
 
 const char* root_ca = \
 "-----BEGIN CERTIFICATE-----\n" \
@@ -160,22 +163,27 @@ void loop() {
 
   if (!latestData.isNull()) {
     JsonArray data = latestData["data"]["bankaraSchedules"]["nodes"];
-    String currentMode = data[0]["bankaraMatchSettings"][1]["vsRule"]["name"];
-    Serial.println(currentMode);
+    gameMode = (const char*)data[0]["bankaraMatchSettings"][1]["vsRule"]["name"];
   }
   
   //Switch menu on button press
-  if (digitalRead(buttonPin) == LOW) {
+  int currentButtonState = digitalRead(buttonPin);
+
+  if (currentButtonState == LOW && previousButtonState == HIGH) {
     switch (currentMode) {
     case TIME:
+      screen.clear();
       currentMode = STAGES;
       break;
     
     case STAGES:
+      screen.clear();
       currentMode = TIME;
       break;
     }
   }
+
+  previousButtonState = currentButtonState;
 
   switch (currentMode) {
   case TIME: {
@@ -198,7 +206,7 @@ void loop() {
     //Print current stages
     // screen.clear();
     screen.setCursor(0, 0);
-    screen.print("stages");
+    screen.print(gameMode);
     break;
   }
   
