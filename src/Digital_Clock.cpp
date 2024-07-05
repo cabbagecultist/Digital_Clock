@@ -7,12 +7,13 @@
 #include <HTTPClient.h>
 #include <LiquidCrystal_I2C.h>
 
+
 void WiFiConnected(WiFiEvent_t event, WiFiEventInfo_t info);
 String httpGETRequest(const char* serverAddress);
 JsonDocument deserialize(String json);
 
-const String ssid = "test1234";
-const String pass = "gaming1234";
+const char ssid[] = "test1234";
+const char pass[] = "gaming1234";
 
 int buttonPin = 10;
 int previousButtonState = HIGH;
@@ -22,7 +23,7 @@ NTPClient timeClient(ntpUDP);
 RTC_DS3231 rtc;
 LiquidCrystal_I2C screen(0x27, 16, 2);
 
-const String serverAddress = "https://splatoon3.ink/data/schedules.json";
+const char serverAddress[] = "https://splatoon3.ink/data/schedules.json";
 JsonDocument latestData;
 
 enum Mode {
@@ -33,8 +34,9 @@ enum Mode {
 Mode currentMode = TIME;
 
 String gameMode = "No Connection";
+char endDatetime[] = "0000-00-00T00:00:00Z";
 
-const char* root_ca = \
+const char *root_ca = \
 "-----BEGIN CERTIFICATE-----\n" \
 "MIIFYjCCBEqgAwIBAgIQd70NbNs2+RrqIQ/E8FjTDTANBgkqhkiG9w0BAQsFADBX\n" \
 "MQswCQYDVQQGEwJCRTEZMBcGA1UEChMQR2xvYmFsU2lnbiBudi1zYTEQMA4GA1UE\n" \
@@ -106,7 +108,7 @@ void setup() {
 
   Wire.setPins(8, 9);
   Serial.begin(115200);
-  while(!Serial);
+  // while(!Serial);
   WiFi.disconnect(false, true);
   WiFi.onEvent(WiFiConnected, WiFiEvent_t::ARDUINO_EVENT_WIFI_STA_GOT_IP);
   WiFi.mode(WIFI_STA);
@@ -126,7 +128,6 @@ void setup() {
 
 void loop() {
   DateTime now = rtc.now();
-
   //WiFi timeout triggered (30s)
   if(!connected && millis() >= 60000 && !WiFiTimeout) {
     Serial.println("WiFi timeout triggered!");
@@ -164,6 +165,7 @@ void loop() {
   if (!latestData.isNull()) {
     JsonArray data = latestData["data"]["bankaraSchedules"]["nodes"];
     gameMode = (const char*)data[0]["bankaraMatchSettings"][1]["vsRule"]["name"];
+    strcpy(endDatetime, data[0]["endTime"]);
   }
   
   //Switch menu on button press
@@ -190,27 +192,24 @@ void loop() {
     //Print time
     // screen.clear();
     screen.setCursor(0, 0);
-
-    //There HAS to be a better way to do this
-    String time = "";
-    time.concat(now.hour());
-    time.concat(":");
-    time.concat(now.minute());
-    time.concat(":");
-    time.concat(now.second());
-
+    char time[] = "00:00:00";
+    sprintf(time, "%.2d:%.2d:%.2d", now.hour(), now.minute(), now.second());
     screen.print(time);
     break;
   }
   case STAGES:
+    int year, month, day, hour, minute, second;
+    sscanf(endDatetime, "%d-%d-%dT%d:%d:%dZ", &year, &month, &day, &hour, &minute, &second);
+    DateTime endTime = DateTime(year, month, day, hour, minute, second);
+    DateTime endTimeCorrected = DateTime(endTime.unixtime() - 14400);
     //Print current stages
     // screen.clear();
     screen.setCursor(0, 0);
     screen.print(gameMode);
+    // screen.setCursor(0, 1);
     break;
   }
   
-  Serial.println(digitalRead(buttonPin));
   // screen.clear();
   // screen.setCursor(0, 0);
   // screen.print("test");
