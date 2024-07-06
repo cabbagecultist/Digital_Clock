@@ -10,33 +10,24 @@
 
 void WiFiConnected(WiFiEvent_t event, WiFiEventInfo_t info);
 void WiFiDisconnected(WiFiEvent_t event, WiFiEventInfo_t info);
-String httpGETRequest(const char* serverAddress);
+String httpsGETRequest(const char* serverAddress);
 JsonDocument deserialize(String json);
-
-const char ssid[] = "test1234";
-const char pass[] = "gaming1234";
-
-int buttonPin = 10;
-int previousButtonState = HIGH;
 
 WiFiUDP ntpUDP;
 NTPClient timeClient(ntpUDP);
 RTC_DS3231 rtc;
 LiquidCrystal_I2C screen(0x27, 16, 2);
-
-const char serverAddress[] = "https://splatoon3.ink/data/schedules.json";
 JsonDocument latestData;
-
 enum Mode {
   TIME,
   STAGES
 };
-
 Mode currentMode = TIME;
 
-String gameMode = "No Connection";
-char endDatetime[] = "0000-00-00T00:00:00Z";
-
+const char ssid[] = "test1234";
+const char pass[] = "gaming1234";
+const char serverAddress[] = "https://splatoon3.ink/data/schedules.json";
+const int buttonPin = 10;
 const char *root_ca = \
 "-----BEGIN CERTIFICATE-----\n" \
 "MIIFYjCCBEqgAwIBAgIQd70NbNs2+RrqIQ/E8FjTDTANBgkqhkiG9w0BAQsFADBX\n" \
@@ -70,6 +61,9 @@ const char *root_ca = \
 "d0lIKO2d1xozclOzgjXPYovJJIultzkMu34qQb9Sz/yilrbCgj8=\n" \
 "-----END CERTIFICATE-----\n";
 
+int previousButtonState = HIGH;
+char gameMode[] = "No Connection";
+char endDatetime[] = "0000-00-00T00:00:00Z";
 bool connected = false;
 bool WiFiTimeout = false;
 uint64_t lastTime = 0;
@@ -87,13 +81,7 @@ void WiFiDisconnected(WiFiEvent_t event, WiFiEventInfo_t info) {
   WiFi.disconnect(true, true);
 }
 
-JsonDocument deserialize(String json) {
-  JsonDocument doc;
-  deserializeJson(doc, json);
-  return doc;
-}
-
-String httpsGETRequest(const String serverAddress) {
+String httpsGETRequest(const char* serverAddress) {
   WiFiClientSecure client;
   HTTPClient https;
   // client.setInsecure();
@@ -108,6 +96,12 @@ String httpsGETRequest(const String serverAddress) {
   }
   https.end();
   return response;
+}
+
+JsonDocument deserialize(String json) {
+  JsonDocument doc;
+  deserializeJson(doc, json);
+  return doc;
 }
 
 void setup() {
@@ -128,8 +122,8 @@ void setup() {
 
   //Maybe add an led for errors in the future
   while(!rtc.begin()) {
-    Serial.println("RTC Module not found!");
-    Serial.flush();
+    // Serial.println("RTC Module not found!");
+    // Serial.flush();
     delay(100);
   }
 }
@@ -172,7 +166,7 @@ void loop() {
 
   if (!latestData.isNull()) {
     JsonArray data = latestData["data"]["bankaraSchedules"]["nodes"];
-    gameMode = (const char*)data[0]["bankaraMatchSettings"][1]["vsRule"]["name"];
+    strcpy(gameMode, data[0]["bankaraMatchSettings"][1]["vsRule"]["name"]);
     strcpy(endDatetime, data[0]["endTime"]);
   }
   
@@ -191,7 +185,6 @@ void loop() {
       break;
     }
   }
-
   previousButtonState = currentButtonState;
 
   switch (currentMode) {
