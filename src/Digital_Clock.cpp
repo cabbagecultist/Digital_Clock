@@ -9,6 +9,7 @@
 
 
 void WiFiConnected(WiFiEvent_t event, WiFiEventInfo_t info);
+void WiFiDisconnected(WiFiEvent_t event, WiFiEventInfo_t info);
 String httpGETRequest(const char* serverAddress);
 JsonDocument deserialize(String json);
 
@@ -80,6 +81,12 @@ void WiFiConnected(WiFiEvent_t event, WiFiEventInfo_t info) {
   connected = true;
 }
 
+void WiFiDisconnected(WiFiEvent_t event, WiFiEventInfo_t info) {
+  connected = false;
+  timeClient.end();
+  WiFi.disconnect(true, true);
+}
+
 JsonDocument deserialize(String json) {
   JsonDocument doc;
   deserializeJson(doc, json);
@@ -111,6 +118,7 @@ void setup() {
   // while(!Serial);
   WiFi.disconnect(false, true);
   WiFi.onEvent(WiFiConnected, WiFiEvent_t::ARDUINO_EVENT_WIFI_STA_GOT_IP);
+  WiFi.onEvent(WiFiDisconnected, WiFiEvent_t::ARDUINO_EVENT_WIFI_STA_DISCONNECTED);
   WiFi.mode(WIFI_STA);
   WiFi.begin(ssid, pass);
 
@@ -170,7 +178,6 @@ void loop() {
   
   //Switch menu on button press
   int currentButtonState = digitalRead(buttonPin);
-
   if (currentButtonState == LOW && previousButtonState == HIGH) {
     switch (currentMode) {
     case TIME:
@@ -190,11 +197,10 @@ void loop() {
   switch (currentMode) {
   case TIME: {
     //Print time
-    // screen.clear();
     screen.setCursor(0, 0);
-    char time[] = "00:00:00";
-    sprintf(time, "%.2d:%.2d:%.2d", now.hour(), now.minute(), now.second());
-    screen.print(time);
+    char formattedTime[] = "00:00:00";
+    sprintf(formattedTime, "%.2d:%.2d:%.2d", now.hour(), now.minute(), now.second());
+    screen.print(formattedTime);
     break;
   }
   case STAGES:
@@ -202,27 +208,14 @@ void loop() {
     sscanf(endDatetime, "%d-%d-%dT%d:%d:%dZ", &year, &month, &day, &hour, &minute, &second);
     DateTime endTime = DateTime(year, month, day, hour, minute, second);
     DateTime endTimeCorrected = DateTime(endTime.unixtime() - 14400);
-    //Print current stages
-    // screen.clear();
+
+    char formattedTime[] = "Next at 00:00:00";
+    sprintf(formattedTime, "Next at %.2d:%.2d:%.2d", endTimeCorrected.hour(), endTimeCorrected.minute(), endTimeCorrected.second());
+    //Print current gamemode
     screen.setCursor(0, 0);
     screen.print(gameMode);
-    // screen.setCursor(0, 1);
+    screen.setCursor(0, 1);
+    screen.print(formattedTime);
     break;
   }
-  
-  // screen.clear();
-  // screen.setCursor(0, 0);
-  // screen.print("test");
-
-  // DateTime now = rtc.now();
-  // Serial.println(now.year());
-  // Serial.println(now.month());
-  // Serial.println(now.day());
-  // Serial.print(now.hour());
-  // Serial.print(':');
-  // Serial.print(now.minute());
-  // Serial.print(':');
-  // Serial.print(now.second());
-  // Serial.println();
-  // delay(1000);
 }
