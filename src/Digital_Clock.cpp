@@ -66,7 +66,7 @@ const char *root_ca = \
 "-----END CERTIFICATE-----\n";
 
 int previousButtonState = HIGH;
-char gameMode[] = "No Connection";
+char gameMode[] = "No Wifi";
 char endDatetime[] = "0000-00-00T00:00:00Z";
 bool connected = false;
 bool WiFiTimeout = false;
@@ -108,19 +108,38 @@ JsonDocument deserialize(String json) {
   return doc;
 }
 
-void drawTime(char formattedTime[]) {
-    tft.setCursor(0, 0);
-    tft.setTextColor(ILI9341_WHITE, ILI9341_BLUE);
+void drawStagesScreen(char formattedTime[]) {
+  // tft.setCursor(0, 0);
+    tft.setTextColor(ILI9341_BLACK, ILI9341_WHITE);
+    tft.setCursor(15, 0);
     tft.setTextSize(2);
+    tft.print("Current Anarchy Rotation");
+    tft.setCursor(15, 50);
+    tft.setTextSize(3);
     tft.print(formattedTime);
+    tft.setCursor(15, 74);
+    tft.print(gameMode);
+}
+
+void drawTimeScreen(char formattedTime[]) {
+    tft.setCursor(0, 0);
+    tft.setTextColor(ILI9341_BLACK, ILI9341_WHITE);
+    tft.setCursor(130, 0);
+    tft.setTextSize(2);
+    tft.print("Time");
+    tft.setCursor(17, 90);
+    tft.setTextSize(6);
+    tft.println(formattedTime);
 }
 
 void setup() {
   pinMode(buttonPin, INPUT_PULLUP);
-
   Wire.setPins(8, 9);
   Serial.begin(115200);
   tft.begin();
+  tft.setRotation(3);
+  tft.fillScreen(ILI9341_BLACK);
+  tft.fillRect(0, 0, 320, 20, ILI9341_WHITE);
   // while(!Serial);
   WiFi.disconnect(false, true);
   WiFi.onEvent(WiFiConnected, WiFiEvent_t::ARDUINO_EVENT_WIFI_STA_GOT_IP);
@@ -131,8 +150,6 @@ void setup() {
   screen.init();
   screen.backlight();
   screen.clear();
-
-  tft.fillScreen(ILI9341_BLUE);
   yield();
 
   //Maybe add an led for errors in the future
@@ -191,11 +208,19 @@ void loop() {
     switch (currentMode) {
     case TIME:
       screen.clear();
+      // tft.setRotation(3);
+      tft.fillScreen(ILI9341_BLACK);
+      yield();
+      tft.fillRect(0, 0, 320, 20, ILI9341_WHITE);
       currentMode = STAGES;
       break;
     
     case STAGES:
       screen.clear();
+      // tft.setRotation(3);
+      tft.fillScreen(ILI9341_BLACK);
+      yield();
+      tft.fillRect(0, 0, 320, 20, ILI9341_WHITE);
       currentMode = TIME;
       break;
     }
@@ -209,10 +234,7 @@ void loop() {
     char formattedTime[] = "00:00:00";
     sprintf(formattedTime, "%.2d:%.2d:%.2d", now.hour(), now.minute(), now.second());
     screen.print(formattedTime);
-    tft.setCursor(0, 0);
-    tft.setTextColor(ILI9341_WHITE, ILI9341_BLUE);
-    tft.setTextSize(2);
-    tft.print(formattedTime);
+    drawTimeScreen(formattedTime);
     break;
   }
   case STAGES:
@@ -228,7 +250,7 @@ void loop() {
     screen.print(gameMode);
     screen.setCursor(0, 1);
     screen.print(formattedTime);
-    drawTime(formattedTime);
+    drawStagesScreen(formattedTime);
     break;
   }
 }
