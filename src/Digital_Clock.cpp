@@ -6,6 +6,9 @@
 #include <ArduinoJson.h>
 #include <HTTPClient.h>
 #include <LiquidCrystal_I2C.h>
+#include "SPI.h"
+#include "Adafruit_GFX.h"
+#include "Adafruit_ILI9341.h"
 
 
 void WiFiConnected(WiFiEvent_t event, WiFiEventInfo_t info);
@@ -17,6 +20,7 @@ WiFiUDP ntpUDP;
 NTPClient timeClient(ntpUDP);
 RTC_DS3231 rtc;
 LiquidCrystal_I2C screen(0x27, 16, 2);
+Adafruit_ILI9341 tft = Adafruit_ILI9341(7, 21, 6, 4, 20, 5);
 JsonDocument latestData;
 enum Mode {
   TIME,
@@ -104,11 +108,19 @@ JsonDocument deserialize(String json) {
   return doc;
 }
 
+void drawTime(char formattedTime[]) {
+    tft.setCursor(0, 0);
+    tft.setTextColor(ILI9341_WHITE, ILI9341_BLUE);
+    tft.setTextSize(2);
+    tft.print(formattedTime);
+}
+
 void setup() {
   pinMode(buttonPin, INPUT_PULLUP);
 
   Wire.setPins(8, 9);
   Serial.begin(115200);
+  tft.begin();
   // while(!Serial);
   WiFi.disconnect(false, true);
   WiFi.onEvent(WiFiConnected, WiFiEvent_t::ARDUINO_EVENT_WIFI_STA_GOT_IP);
@@ -119,6 +131,9 @@ void setup() {
   screen.init();
   screen.backlight();
   screen.clear();
+
+  tft.fillScreen(ILI9341_BLUE);
+  yield();
 
   //Maybe add an led for errors in the future
   while(!rtc.begin()) {
@@ -194,6 +209,10 @@ void loop() {
     char formattedTime[] = "00:00:00";
     sprintf(formattedTime, "%.2d:%.2d:%.2d", now.hour(), now.minute(), now.second());
     screen.print(formattedTime);
+    tft.setCursor(0, 0);
+    tft.setTextColor(ILI9341_WHITE, ILI9341_BLUE);
+    tft.setTextSize(2);
+    tft.print(formattedTime);
     break;
   }
   case STAGES:
@@ -209,6 +228,7 @@ void loop() {
     screen.print(gameMode);
     screen.setCursor(0, 1);
     screen.print(formattedTime);
+    drawTime(formattedTime);
     break;
   }
 }
