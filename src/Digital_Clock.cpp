@@ -5,7 +5,6 @@
 #include "RTClib.h"
 #include <ArduinoJson.h>
 #include <HTTPClient.h>
-#include <LiquidCrystal_I2C.h>
 #include "SPI.h"
 #include "Adafruit_GFX.h"
 #include "Adafruit_ILI9341.h"
@@ -15,11 +14,14 @@ void WiFiConnected(WiFiEvent_t event, WiFiEventInfo_t info);
 void WiFiDisconnected(WiFiEvent_t event, WiFiEventInfo_t info);
 String httpsGETRequest(const char* serverAddress);
 JsonDocument deserialize(String json);
+void drawStagesScreen(char formattedTime[]);
+void drawTimeScreen(char formattedTime[]);
+void stageInit();
+void timeInit();
 
 WiFiUDP ntpUDP;
 NTPClient timeClient(ntpUDP);
 RTC_DS3231 rtc;
-LiquidCrystal_I2C screen(0x27, 16, 2);
 Adafruit_ILI9341 tft = Adafruit_ILI9341(7, 21, 6, 4, 20, 5);
 JsonDocument latestData;
 enum Mode {
@@ -66,10 +68,11 @@ const char *root_ca = \
 "-----END CERTIFICATE-----\n";
 
 int previousButtonState = HIGH;
-char gameMode[] = "No Wifi";
+char gameMode[] = "No Connection";
 char endDatetime[] = "0000-00-00T00:00:00Z";
+char formattedStageTime[] = "Next at 00:00:00";
+char formattedTime[] = "00:00:00";
 bool connected = false;
-bool WiFiTimeout = false;
 uint64_t lastTime = 0;
 
 void WiFiConnected(WiFiEvent_t event, WiFiEventInfo_t info) {
@@ -108,28 +111,49 @@ JsonDocument deserialize(String json) {
   return doc;
 }
 
+void stageInit() {
+  tft.fillScreen(ILI9341_BLACK);
+  yield();
+  tft.fillRect(0, 0, 320, 20, ILI9341_WHITE);
+  yield();
+  drawStagesScreen(formattedStageTime);
+}
+
 void drawStagesScreen(char formattedTime[]) {
-  // tft.setCursor(0, 0);
-    tft.setTextColor(ILI9341_BLACK, ILI9341_WHITE);
-    tft.setCursor(15, 0);
-    tft.setTextSize(2);
-    tft.print("Current Anarchy Rotation");
-    tft.setCursor(15, 50);
-    tft.setTextSize(3);
-    tft.print(formattedTime);
-    tft.setCursor(15, 74);
-    tft.print(gameMode);
+// tft.setCursor(0, 0);
+  tft.setTextColor(ILI9341_BLACK, ILI9341_WHITE);
+  tft.setCursor(15, 0);
+  tft.setTextSize(2);
+  tft.print("Current Anarchy Rotation");
+  yield();
+  tft.setCursor(15, 50);
+  tft.setTextSize(3);
+  tft.print(formattedTime);
+  yield();
+  tft.setCursor(15, 74);
+  tft.print(gameMode);
+  yield();
+}
+
+void timeInit() {
+  tft.fillScreen(ILI9341_BLACK);
+  yield();
+  tft.fillRect(0, 0, 320, 20, ILI9341_WHITE);
+  yield();
+  drawTimeScreen(formattedTime);
 }
 
 void drawTimeScreen(char formattedTime[]) {
-    tft.setCursor(0, 0);
-    tft.setTextColor(ILI9341_BLACK, ILI9341_WHITE);
-    tft.setCursor(130, 0);
-    tft.setTextSize(2);
-    tft.print("Time");
-    tft.setCursor(17, 90);
-    tft.setTextSize(6);
-    tft.println(formattedTime);
+  tft.setCursor(0, 0);
+  tft.setTextColor(ILI9341_BLACK, ILI9341_WHITE);
+  tft.setCursor(130, 0);
+  tft.setTextSize(2);
+  tft.print("Time");
+  yield();
+  tft.setCursor(17, 90);
+  tft.setTextSize(6);
+  tft.println(formattedTime);
+  yield();
 }
 
 void setup() {
@@ -146,10 +170,6 @@ void setup() {
   WiFi.onEvent(WiFiDisconnected, WiFiEvent_t::ARDUINO_EVENT_WIFI_STA_DISCONNECTED);
   WiFi.mode(WIFI_STA);
   WiFi.begin(ssid, pass);
-
-  screen.init();
-  screen.backlight();
-  screen.clear();
   yield();
 
   //Maybe add an led for errors in the future
@@ -163,10 +183,13 @@ void setup() {
 void loop() {
   DateTime now = rtc.now();
   //WiFi timeout triggered (30s)
-  if(!connected && millis() >= 60000 && !WiFiTimeout) {
-    Serial.println("WiFi timeout triggered!");
-    WiFi.disconnect(true, true);
-    WiFiTimeout = true;
+  if(!connected && millis() >= 60000) {
+    static bool WiFiTimeout = false;
+    if (!WiFiTimeout) {
+      Serial.println("WiFi timeout triggered!");
+      WiFi.disconnect(true, true);
+      WiFiTimeout = true;
+    }
   }
 
   if(connected && rtc.lostPower()) {
@@ -189,7 +212,7 @@ void loop() {
       firstRequest = true;
     }
 
-    if ((millis() - lastTime) > 18000000) {
+    if ((millis() - lastTime) >= 18000000) {
       String response = httpsGETRequest(serverAddress);
       latestData = deserialize(response);
       lastTime = millis();
@@ -207,20 +230,12 @@ void loop() {
   if (currentButtonState == LOW && previousButtonState == HIGH) {
     switch (currentMode) {
     case TIME:
-      screen.clear();
-      // tft.setRotation(3);
-      tft.fillScreen(ILI9341_BLACK);
-      yield();
-      tft.fillRect(0, 0, 320, 20, ILI9341_WHITE);
+      stageInit();
       currentMode = STAGES;
       break;
     
     case STAGES:
-      screen.clear();
-      // tft.setRotation(3);
-      tft.fillScreen(ILI9341_BLACK);
-      yield();
-      tft.fillRect(0, 0, 320, 20, ILI9341_WHITE);
+      timeInit();
       currentMode = TIME;
       break;
     }
@@ -229,12 +244,12 @@ void loop() {
 
   switch (currentMode) {
   case TIME: {
-    //Print time
-    screen.setCursor(0, 0);
-    char formattedTime[] = "00:00:00";
+    static char lastFormattedTime[] = "00:00:00";
     sprintf(formattedTime, "%.2d:%.2d:%.2d", now.hour(), now.minute(), now.second());
-    screen.print(formattedTime);
-    drawTimeScreen(formattedTime);
+    if (strcmp(formattedTime, lastFormattedTime) != 0) {
+      drawTimeScreen(formattedTime);
+      strcpy(lastFormattedTime, formattedTime);
+    }
     break;
   }
   case STAGES:
@@ -243,14 +258,12 @@ void loop() {
     DateTime endTime = DateTime(year, month, day, hour, minute, second);
     DateTime endTimeCorrected = DateTime(endTime.unixtime() - 14400);
 
-    char formattedTime[] = "Next at 00:00:00";
-    sprintf(formattedTime, "Next at %.2d:%.2d:%.2d", endTimeCorrected.hour(), endTimeCorrected.minute(), endTimeCorrected.second());
-    //Print current gamemode
-    screen.setCursor(0, 0);
-    screen.print(gameMode);
-    screen.setCursor(0, 1);
-    screen.print(formattedTime);
-    drawStagesScreen(formattedTime);
+    static char lastFormattedTime[] = "Next at 00:00:00";
+    sprintf(formattedStageTime, "Next at %.2d:%.2d:%.2d", endTimeCorrected.hour(), endTimeCorrected.minute(), endTimeCorrected.second());
+    if (strcmp(formattedStageTime, lastFormattedTime) != 0) {
+      drawStagesScreen(formattedStageTime);
+      strcpy(lastFormattedTime, formattedStageTime);
+    }
     break;
   }
 }
