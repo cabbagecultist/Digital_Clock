@@ -710,12 +710,12 @@
 
 
   (no_connect (at 194.31 86.36) (uuid 6a2474d6-d4a3-4d45-b5d5-88b4551ab701))
-  (no_connect (at 194.31 88.9) (uuid 6a2474d6-d4a3-4d45-b5d5-88b4551ab701))
+  (no_connect (at 194.31 88.9) (uuid 6a2474d6-d4a3-4d45-b5d5-88b4551ab702))
   (no_connect (at 102.87 107.95) (uuid f8530495-c0a2-4b6d-9f4e-09402b2ac151))
-  (no_connect (at 102.87 100.33) (uuid f8530495-c0a2-4b6d-9f4e-09402b2ac151))
-  (no_connect (at 102.87 105.41) (uuid f8530495-c0a2-4b6d-9f4e-09402b2ac151))
-  (no_connect (at 102.87 102.87) (uuid f8530495-c0a2-4b6d-9f4e-09402b2ac151))
-  (no_connect (at 102.87 110.49) (uuid f8530495-c0a2-4b6d-9f4e-09402b2ac151))
+  (no_connect (at 102.87 100.33) (uuid f8530495-c0a2-4b6d-9f4e-09402b2ac152))
+  (no_connect (at 102.87 105.41) (uuid f8530495-c0a2-4b6d-9f4e-09402b2ac153))
+  (no_connect (at 102.87 102.87) (uuid f8530495-c0a2-4b6d-9f4e-09402b2ac154))
+  (no_connect (at 102.87 110.49) (uuid f8530495-c0a2-4b6d-9f4e-09402b2ac155))
 
   (wire (pts (xy 166.37 102.87) (xy 166.37 93.98))
     (stroke (width 0) (type default) (color 0 0 0 0))
@@ -1030,7 +1030,7 @@
     (property "Reference" "J2" (id 0) (at 200.66 91.4399 0)
       (effects (font (size 1.27 1.27)) (justify left))
     )
-    (property "Value" "Conn_01x06_Female" (id 1) (at 200.66 93.9799 0)
+    (property "Value" "RTC" (id 1) (at 200.66 93.9799 0)
       (effects (font (size 1.27 1.27)) (justify left))
     )
     (property "Footprint" "Connector_PinHeader_2.54mm:PinHeader_1x06_P2.54mm_Vertical" (id 2) (at 199.39 91.44 0)
@@ -1143,7 +1143,7 @@
       (reference "J1") (unit 1) (value "TFT") (footprint "Connector_PinHeader_2.54mm:PinHeader_1x14_P2.54mm_Vertical")
     )
     (path "/8d2649af-c4b5-4d1d-a8b0-0c4d99b42cd3"
-      (reference "J2") (unit 1) (value "Conn_01x06_Female") (footprint "Connector_PinHeader_2.54mm:PinHeader_1x06_P2.54mm_Vertical")
+      (reference "J2") (unit 1) (value "RTC") (footprint "Connector_PinHeader_2.54mm:PinHeader_1x06_P2.54mm_Vertical")
     )
     (path "/8ce9953c-27b5-4d7b-a939-7c7cb3c846e3"
       (reference "SW1") (unit 1) (value "SW_MEC_5G") (footprint "Button_Switch_SMD:SW_MEC_5GSH9")

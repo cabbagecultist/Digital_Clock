@@ -8,6 +8,7 @@
 #include "SPI.h"
 #include "Adafruit_GFX.h"
 #include "Adafruit_ILI9341.h"
+#include "SD.h"
 
 
 void WiFiConnected(WiFiEvent_t event, WiFiEventInfo_t info);
@@ -22,7 +23,8 @@ void timeInit();
 WiFiUDP ntpUDP;
 NTPClient timeClient(ntpUDP);
 RTC_DS3231 rtc;
-Adafruit_ILI9341 tft = Adafruit_ILI9341(7, 21, 6, 4, 20, 5);
+// Adafruit_ILI9341 tft = Adafruit_ILI9341(7, 21, 6, 4, 20, 5);
+Adafruit_ILI9341 tft = Adafruit_ILI9341(&SPI, 21, 7, 20);
 JsonDocument latestData;
 enum Mode {
   TIME,
@@ -34,6 +36,9 @@ const char ssid[] = "test1234";
 const char pass[] = "gaming1234";
 const char serverAddress[] = "https://splatoon3.ink/data/schedules.json";
 const int buttonPin = 10;
+
+File file;
+
 const char *root_ca = \
 "-----BEGIN CERTIFICATE-----\n" \
 "MIIFYjCCBEqgAwIBAgIQd70NbNs2+RrqIQ/E8FjTDTANBgkqhkiG9w0BAQsFADBX\n" \
@@ -157,20 +162,22 @@ void drawTimeScreen(char formattedTime[]) {
 }
 
 void setup() {
-  pinMode(buttonPin, INPUT_PULLUP);
   Wire.setPins(8, 9);
   Serial.begin(115200);
+
   tft.begin();
   tft.setRotation(3);
   tft.fillScreen(ILI9341_BLACK);
   tft.fillRect(0, 0, 320, 20, ILI9341_WHITE);
-  // while(!Serial);
+
   WiFi.disconnect(false, true);
   WiFi.onEvent(WiFiConnected, WiFiEvent_t::ARDUINO_EVENT_WIFI_STA_GOT_IP);
   WiFi.onEvent(WiFiDisconnected, WiFiEvent_t::ARDUINO_EVENT_WIFI_STA_DISCONNECTED);
   WiFi.mode(WIFI_STA);
   WiFi.begin(ssid, pass);
   yield();
+  SD.begin(0, SPI);
+  pinMode(buttonPin, INPUT_PULLUP);
 
   //Maybe add an led for errors in the future
   while(!rtc.begin()) {
@@ -181,6 +188,10 @@ void setup() {
 }
 
 void loop() {
+  if (SD.exists("/test.txt")) {
+    Serial.println("File exists");
+  }
+
   DateTime now = rtc.now();
   //WiFi timeout triggered (30s)
   if(!connected && millis() >= 60000) {
