@@ -8,7 +8,10 @@
 #include "SPI.h"
 #include "Adafruit_GFX.h"
 #include "Adafruit_ILI9341.h"
-#include "SD.h"
+#include "Adafruit_SPIFlash.h"
+#include "Adafruit_ImageReader.h"
+#include "SdFat.h"
+
 
 
 void WiFiConnected(WiFiEvent_t event, WiFiEventInfo_t info);
@@ -23,12 +26,15 @@ void timeInit();
 WiFiUDP ntpUDP;
 NTPClient timeClient(ntpUDP);
 RTC_DS3231 rtc;
+SdFat SD;
+Adafruit_ImageReader reader(SD);
 // Adafruit_ILI9341 tft = Adafruit_ILI9341(7, 21, 6, 4, 20, 5);
 Adafruit_ILI9341 tft = Adafruit_ILI9341(&SPI, 21, 7, 20);
 JsonDocument latestData;
 enum Mode {
   TIME,
-  STAGES
+  STAGES,
+  IMAGE
 };
 Mode currentMode = TIME;
 
@@ -36,8 +42,6 @@ const char ssid[] = "test1234";
 const char pass[] = "gaming1234";
 const char serverAddress[] = "https://splatoon3.ink/data/schedules.json";
 const int buttonPin = 10;
-
-File file;
 
 const char *root_ca = \
 "-----BEGIN CERTIFICATE-----\n" \
@@ -176,7 +180,8 @@ void setup() {
   WiFi.mode(WIFI_STA);
   WiFi.begin(ssid, pass);
   yield();
-  SD.begin(0, SPI);
+  
+  SD.begin(0, SD_SCK_MHZ(25));
   pinMode(buttonPin, INPUT_PULLUP);
 
   //Maybe add an led for errors in the future
@@ -188,9 +193,9 @@ void setup() {
 }
 
 void loop() {
-  if (SD.exists("/test.txt")) {
-    Serial.println("File exists");
-  }
+  // if (SD.exists("/test.txt")) {
+  //   Serial.println("File exists");
+  // }
 
   DateTime now = rtc.now();
   //WiFi timeout triggered (30s)
@@ -246,6 +251,11 @@ void loop() {
       break;
     
     case STAGES:
+      reader.drawBMP("test.bmp", tft, 0, 0, true);
+      currentMode = IMAGE;
+      break;
+
+    case IMAGE:
       timeInit();
       currentMode = TIME;
       break;
