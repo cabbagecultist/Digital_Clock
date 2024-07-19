@@ -11,6 +11,8 @@
 #include "Adafruit_SPIFlash.h"
 #include "Adafruit_ImageReader.h"
 #include "SdFat.h"
+#include "screen/Clock_Screen.h"
+#include "screen/Cat_Screen.h"
 
 
 
@@ -37,6 +39,10 @@ enum Mode {
   IMAGE
 };
 Mode currentMode = TIME;
+
+//Test
+Cat_Screen catScreen = Cat_Screen(&tft, &reader);
+Clock_Screen* screen;
 
 const char ssid[] = "test1234";
 const char pass[] = "gaming1234";
@@ -96,6 +102,10 @@ void WiFiDisconnected(WiFiEvent_t event, WiFiEventInfo_t info) {
   timeClient.end();
   WiFi.disconnect(true, true);
 }
+
+// void screenInit(Clock_Screen screen) {
+//   screen.init();
+// }
 
 String httpsGETRequest(const char* serverAddress) {
   WiFiClientSecure client;
@@ -190,6 +200,8 @@ void setup() {
     // Serial.flush();
     delay(100);
   }
+
+  screen = &catScreen;
 }
 
 void loop() {
@@ -251,7 +263,10 @@ void loop() {
       break;
     
     case STAGES:
-      reader.drawBMP("test.bmp", tft, 0, 0, true);
+      // reader.drawBMP("test.bmp", tft, 0, 0, true);
+      // screenInit(catScreen);
+      // screen->init();
+      catScreen.init();
       currentMode = IMAGE;
       break;
 
