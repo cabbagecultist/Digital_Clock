@@ -9,6 +9,7 @@ Just kidding, this sucks.
 Features:
 - Automatic time synchronisation with an NTP server, preventing the need for manually setting the time in case the RTC clock loses power.
 - An RTC Module, ensuring that the clock stays functional even when not connected to the internet.
+- SD Card support.
 - A simple, modular menu system!
 
 Adding screens to the menu is as easy as: 
