@@ -11,9 +11,10 @@
 #include "Adafruit_SPIFlash.h"
 #include "Adafruit_ImageReader.h"
 #include "SdFat.h"
-#include "screen/Clock_Screen.h"
-#include "screen/Cat_Screen.h"
-
+#include "Screen.h"
+#include "Cat_Screen.h"
+#include "Time_Screen.h"
+#include "Stages_Screen.h"
 
 
 void WiFiConnected(WiFiEvent_t event, WiFiEventInfo_t info);
@@ -24,6 +25,7 @@ void drawStagesScreen(char formattedTime[]);
 void drawTimeScreen(char formattedTime[]);
 void stageInit();
 void timeInit();
+void getFormattedTime(char* timeString, DateTime time);
 
 WiFiUDP ntpUDP;
 NTPClient timeClient(ntpUDP);
@@ -40,9 +42,10 @@ enum Mode {
 };
 Mode currentMode = TIME;
 
-//Test
-Cat_Screen catScreen = Cat_Screen(&tft, &reader);
-Clock_Screen* screen;
+Cat_Screen catScreen(&tft, &reader);
+Time_Screen timeScreen(&tft, &reader, &rtc);
+Stages_Screen stagesScreen(&tft, &reader);
+Screen* screen;
 
 const char ssid[] = "test1234";
 const char pass[] = "gaming1234";
@@ -50,37 +53,37 @@ const char serverAddress[] = "https://splatoon3.ink/data/schedules.json";
 const int buttonPin = 10;
 
 const char *root_ca = \
-"-----BEGIN CERTIFICATE-----\n" \
-"MIIFYjCCBEqgAwIBAgIQd70NbNs2+RrqIQ/E8FjTDTANBgkqhkiG9w0BAQsFADBX\n" \
-"MQswCQYDVQQGEwJCRTEZMBcGA1UEChMQR2xvYmFsU2lnbiBudi1zYTEQMA4GA1UE\n" \
-"CxMHUm9vdCBDQTEbMBkGA1UEAxMSR2xvYmFsU2lnbiBSb290IENBMB4XDTIwMDYx\n" \
-"OTAwMDA0MloXDTI4MDEyODAwMDA0MlowRzELMAkGA1UEBhMCVVMxIjAgBgNVBAoT\n" \
-"GUdvb2dsZSBUcnVzdCBTZXJ2aWNlcyBMTEMxFDASBgNVBAMTC0dUUyBSb290IFIx\n" \
-"MIICIjANBgkqhkiG9w0BAQEFAAOCAg8AMIICCgKCAgEAthECix7joXebO9y/lD63\n" \
-"ladAPKH9gvl9MgaCcfb2jH/76Nu8ai6Xl6OMS/kr9rH5zoQdsfnFl97vufKj6bwS\n" \
-"iV6nqlKr+CMny6SxnGPb15l+8Ape62im9MZaRw1NEDPjTrETo8gYbEvs/AmQ351k\n" \
-"KSUjB6G00j0uYODP0gmHu81I8E3CwnqIiru6z1kZ1q+PsAewnjHxgsHA3y6mbWwZ\n" \
-"DrXYfiYaRQM9sHmklCitD38m5agI/pboPGiUU+6DOogrFZYJsuB6jC511pzrp1Zk\n" \
-"j5ZPaK49l8KEj8C8QMALXL32h7M1bKwYUH+E4EzNktMg6TO8UpmvMrUpsyUqtEj5\n" \
-"cuHKZPfmghCN6J3Cioj6OGaK/GP5Afl4/Xtcd/p2h/rs37EOeZVXtL0m79YB0esW\n" \
-"CruOC7XFxYpVq9Os6pFLKcwZpDIlTirxZUTQAs6qzkm06p98g7BAe+dDq6dso499\n" \
-"iYH6TKX/1Y7DzkvgtdizjkXPdsDtQCv9Uw+wp9U7DbGKogPeMa3Md+pvez7W35Ei\n" \
-"Eua++tgy/BBjFFFy3l3WFpO9KWgz7zpm7AeKJt8T11dleCfeXkkUAKIAf5qoIbap\n" \
-"sZWwpbkNFhHax2xIPEDgfg1azVY80ZcFuctL7TlLnMQ/0lUTbiSw1nH69MG6zO0b\n" \
-"9f6BQdgAmD06yK56mDcYBZUCAwEAAaOCATgwggE0MA4GA1UdDwEB/wQEAwIBhjAP\n" \
-"BgNVHRMBAf8EBTADAQH/MB0GA1UdDgQWBBTkrysmcRorSCeFL1JmLO/wiRNxPjAf\n" \
-"BgNVHSMEGDAWgBRge2YaRQ2XyolQL30EzTSo//z9SzBgBggrBgEFBQcBAQRUMFIw\n" \
-"JQYIKwYBBQUHMAGGGWh0dHA6Ly9vY3NwLnBraS5nb29nL2dzcjEwKQYIKwYBBQUH\n" \
-"MAKGHWh0dHA6Ly9wa2kuZ29vZy9nc3IxL2dzcjEuY3J0MDIGA1UdHwQrMCkwJ6Al\n" \
-"oCOGIWh0dHA6Ly9jcmwucGtpLmdvb2cvZ3NyMS9nc3IxLmNybDA7BgNVHSAENDAy\n" \
-"MAgGBmeBDAECATAIBgZngQwBAgIwDQYLKwYBBAHWeQIFAwIwDQYLKwYBBAHWeQIF\n" \
-"AwMwDQYJKoZIhvcNAQELBQADggEBADSkHrEoo9C0dhemMXoh6dFSPsjbdBZBiLg9\n" \
-"NR3t5P+T4Vxfq7vqfM/b5A3Ri1fyJm9bvhdGaJQ3b2t6yMAYN/olUazsaL+yyEn9\n" \
-"WprKASOshIArAoyZl+tJaox118fessmXn1hIVw41oeQa1v1vg4Fv74zPl6/AhSrw\n" \
-"9U5pCZEt4Wi4wStz6dTZ/CLANx8LZh1J7QJVj2fhMtfTJr9w4z30Z209fOU0iOMy\n" \
-"+qduBmpvvYuR7hZL6Dupszfnw0Skfths18dG9ZKb59UhvmaSGZRVbNQpsg3BZlvi\n" \
-"d0lIKO2d1xozclOzgjXPYovJJIultzkMu34qQb9Sz/yilrbCgj8=\n" \
-"-----END CERTIFICATE-----\n";
+    "-----BEGIN CERTIFICATE-----\n" \
+    "MIIFYjCCBEqgAwIBAgIQd70NbNs2+RrqIQ/E8FjTDTANBgkqhkiG9w0BAQsFADBX\n" \
+    "MQswCQYDVQQGEwJCRTEZMBcGA1UEChMQR2xvYmFsU2lnbiBudi1zYTEQMA4GA1UE\n" \
+    "CxMHUm9vdCBDQTEbMBkGA1UEAxMSR2xvYmFsU2lnbiBSb290IENBMB4XDTIwMDYx\n" \
+    "OTAwMDA0MloXDTI4MDEyODAwMDA0MlowRzELMAkGA1UEBhMCVVMxIjAgBgNVBAoT\n" \
+    "GUdvb2dsZSBUcnVzdCBTZXJ2aWNlcyBMTEMxFDASBgNVBAMTC0dUUyBSb290IFIx\n" \
+    "MIICIjANBgkqhkiG9w0BAQEFAAOCAg8AMIICCgKCAgEAthECix7joXebO9y/lD63\n" \
+    "ladAPKH9gvl9MgaCcfb2jH/76Nu8ai6Xl6OMS/kr9rH5zoQdsfnFl97vufKj6bwS\n" \
+    "iV6nqlKr+CMny6SxnGPb15l+8Ape62im9MZaRw1NEDPjTrETo8gYbEvs/AmQ351k\n" \
+    "KSUjB6G00j0uYODP0gmHu81I8E3CwnqIiru6z1kZ1q+PsAewnjHxgsHA3y6mbWwZ\n" \
+    "DrXYfiYaRQM9sHmklCitD38m5agI/pboPGiUU+6DOogrFZYJsuB6jC511pzrp1Zk\n" \
+    "j5ZPaK49l8KEj8C8QMALXL32h7M1bKwYUH+E4EzNktMg6TO8UpmvMrUpsyUqtEj5\n" \
+    "cuHKZPfmghCN6J3Cioj6OGaK/GP5Afl4/Xtcd/p2h/rs37EOeZVXtL0m79YB0esW\n" \
+    "CruOC7XFxYpVq9Os6pFLKcwZpDIlTirxZUTQAs6qzkm06p98g7BAe+dDq6dso499\n" \
+    "iYH6TKX/1Y7DzkvgtdizjkXPdsDtQCv9Uw+wp9U7DbGKogPeMa3Md+pvez7W35Ei\n" \
+    "Eua++tgy/BBjFFFy3l3WFpO9KWgz7zpm7AeKJt8T11dleCfeXkkUAKIAf5qoIbap\n" \
+    "sZWwpbkNFhHax2xIPEDgfg1azVY80ZcFuctL7TlLnMQ/0lUTbiSw1nH69MG6zO0b\n" \
+    "9f6BQdgAmD06yK56mDcYBZUCAwEAAaOCATgwggE0MA4GA1UdDwEB/wQEAwIBhjAP\n" \
+    "BgNVHRMBAf8EBTADAQH/MB0GA1UdDgQWBBTkrysmcRorSCeFL1JmLO/wiRNxPjAf\n" \
+    "BgNVHSMEGDAWgBRge2YaRQ2XyolQL30EzTSo//z9SzBgBggrBgEFBQcBAQRUMFIw\n" \
+    "JQYIKwYBBQUHMAGGGWh0dHA6Ly9vY3NwLnBraS5nb29nL2dzcjEwKQYIKwYBBQUH\n" \
+    "MAKGHWh0dHA6Ly9wa2kuZ29vZy9nc3IxL2dzcjEuY3J0MDIGA1UdHwQrMCkwJ6Al\n" \
+    "oCOGIWh0dHA6Ly9jcmwucGtpLmdvb2cvZ3NyMS9nc3IxLmNybDA7BgNVHSAENDAy\n" \
+    "MAgGBmeBDAECATAIBgZngQwBAgIwDQYLKwYBBAHWeQIFAwIwDQYLKwYBBAHWeQIF\n" \
+    "AwMwDQYJKoZIhvcNAQELBQADggEBADSkHrEoo9C0dhemMXoh6dFSPsjbdBZBiLg9\n" \
+    "NR3t5P+T4Vxfq7vqfM/b5A3Ri1fyJm9bvhdGaJQ3b2t6yMAYN/olUazsaL+yyEn9\n" \
+    "WprKASOshIArAoyZl+tJaox118fessmXn1hIVw41oeQa1v1vg4Fv74zPl6/AhSrw\n" \
+    "9U5pCZEt4Wi4wStz6dTZ/CLANx8LZh1J7QJVj2fhMtfTJr9w4z30Z209fOU0iOMy\n" \
+    "+qduBmpvvYuR7hZL6Dupszfnw0Skfths18dG9ZKb59UhvmaSGZRVbNQpsg3BZlvi\n" \
+    "d0lIKO2d1xozclOzgjXPYovJJIultzkMu34qQb9Sz/yilrbCgj8=\n" \
+    "-----END CERTIFICATE-----\n";
 
 int previousButtonState = HIGH;
 char gameMode[] = "No Connection";
@@ -129,6 +132,12 @@ JsonDocument deserialize(String json) {
   deserializeJson(doc, json);
   return doc;
 }
+
+// void getFormattedTime(char* timeString, DateTime time) {
+//   char formattedTime[9] = "00:00:00";
+//   sprintf(formattedTime, "%.2d:%.2d:%.2d", time.hour(), time.minute(), time.second());
+//   strcpy(timeString, formattedTime);
+// }
 
 void stageInit() {
   tft.fillScreen(ILI9341_BLACK);
@@ -201,7 +210,8 @@ void setup() {
     delay(100);
   }
 
-  screen = &catScreen;
+  screen = &stagesScreen;
+  // screen->init();
 }
 
 void loop() {
@@ -258,20 +268,21 @@ void loop() {
   if (currentButtonState == LOW && previousButtonState == HIGH) {
     switch (currentMode) {
     case TIME:
-      stageInit();
+      // stageInit();
+      screen->init();
       currentMode = STAGES;
       break;
     
     case STAGES:
-      // reader.drawBMP("test.bmp", tft, 0, 0, true);
+      reader.drawBMP("test.bmp", tft, 0, 0, true);
       // screenInit(catScreen);
       // screen->init();
-      catScreen.init();
       currentMode = IMAGE;
       break;
 
     case IMAGE:
       timeInit();
+      // screen->init();
       currentMode = TIME;
       break;
     }
@@ -286,20 +297,23 @@ void loop() {
       drawTimeScreen(formattedTime);
       strcpy(lastFormattedTime, formattedTime);
     }
-    break;
+    // break;
+    // screen->draw();
   }
   case STAGES:
-    int year, month, day, hour, minute, second;
-    sscanf(endDatetime, "%d-%d-%dT%d:%d:%dZ", &year, &month, &day, &hour, &minute, &second);
-    DateTime endTime = DateTime(year, month, day, hour, minute, second);
-    DateTime endTimeCorrected = DateTime(endTime.unixtime() - 14400);
+    // int year, month, day, hour, minute, second;
+    // sscanf(endDatetime, "%d-%d-%dT%d:%d:%dZ", &year, &month, &day, &hour, &minute, &second);
+    // DateTime endTime = DateTime(year, month, day, hour, minute, second);
+    // DateTime endTimeCorrected = DateTime(endTime.unixtime() - 14400);
 
-    static char lastFormattedTime[] = "Next at 00:00:00";
-    sprintf(formattedStageTime, "Next at %.2d:%.2d:%.2d", endTimeCorrected.hour(), endTimeCorrected.minute(), endTimeCorrected.second());
-    if (strcmp(formattedStageTime, lastFormattedTime) != 0) {
-      drawStagesScreen(formattedStageTime);
-      strcpy(lastFormattedTime, formattedStageTime);
-    }
+    // static char lastFormattedTime[] = "Next at 00:00:00";
+    // sprintf(formattedStageTime, "Next at %.2d:%.2d:%.2d", endTimeCorrected.hour(), endTimeCorrected.minute(), endTimeCorrected.second());
+    // if (strcmp(formattedStageTime, lastFormattedTime) != 0) {
+    //   drawStagesScreen(formattedStageTime);
+    //   strcpy(lastFormattedTime, formattedStageTime);
+    // }
+    screen->draw();
     break;
   }
+  stagesScreen.update();
 }
