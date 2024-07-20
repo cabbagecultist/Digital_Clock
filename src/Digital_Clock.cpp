@@ -27,28 +27,20 @@ SdFat SD;
 Adafruit_ImageReader reader(SD);
 // Adafruit_ILI9341 tft = Adafruit_ILI9341(7, 21, 6, 4, 20, 5);
 Adafruit_ILI9341 tft = Adafruit_ILI9341(&SPI, 21, 7, 20);
-// enum Mode {
-//   TIME,
-//   STAGES,
-//   IMAGE
-// };
+const int buttonPin = 10;
+int previousButtonState = HIGH;
 
 Cat_Screen catScreen(&tft, &reader);
 Time_Screen timeScreen(&tft, &reader, &rtc);
 Stages_Screen stagesScreen(&tft, &reader);
-// Screen modes[3] = {timeScreen, catScreen, stagesScreen};
-std::vector<Screen*> modes = {&timeScreen, &stagesScreen, &catScreen};
-Screen currentMode;
-int modeIndex = 0;
 
-// Mode currentMode = TIME;
-Screen* screen = &timeScreen;
+//Add pointers to screens here
+int modeIndex = 0;
+std::vector<Screen*> modes = {&timeScreen, &stagesScreen, &catScreen};
+Screen* screen = modes[0];
 
 const char ssid[] = "test1234";
 const char pass[] = "gaming1234";
-const int buttonPin = 10;
-
-int previousButtonState = HIGH;
 
 void WiFiConnected(WiFiEvent_t event, WiFiEventInfo_t info) {
   Serial.println(WiFi.localIP());
@@ -80,9 +72,7 @@ void setup() {
   pinMode(buttonPin, INPUT_PULLUP);
 
   //Maybe add an led for errors in the future
-  while(!rtc.begin()) {
-    delay(100);
-  }
+  while(!rtc.begin());
 
   screen->init();
 }
@@ -119,31 +109,11 @@ void loop() {
     } 
     screen = modes[modeIndex];
     screen->init();
-    // currentMode = modes[modeIndex];
-    // screen = currentMode;
-    // screen->init();
-    // switch (currentMode) {
-    // case TIME:
-    //   screen = &stagesScreen;
-    //   screen->init(); 
-    //   currentMode = STAGES;
-    //   break;
-    
-    // case STAGES:
-    //   screen = &catScreen;
-    //   screen->init();
-    //   currentMode = IMAGE;
-    //   break;
-
-    // case IMAGE:
-    //   screen = &timeScreen;
-    //   screen->init();
-    //   currentMode = TIME;
-    //   break;
-    // }
   }
   previousButtonState = currentButtonState;
 
-  screen->draw();
+  //Screen-specific code
   stagesScreen.update();
+
+  screen->draw();
 }
